@@ -110,3 +110,4 @@ jd_seasonality(dif)
 ```
 This is confirmed by the test.
 So, why is that?
+What do you think?
