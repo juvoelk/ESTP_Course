@@ -1,0 +1,112 @@
+---
+title: "ESTP training course"
+output:
+  html_notebook: default
+  pdf_document: default
+  word_document: default
+---
+
+The required packages.
+```{r}
+library(RJDemetra)
+library(JDLight)
+```
+
+Load two time-series from JDLight.
+
+```{r}
+a<-retail$HobbyToyAndGameStores
+b<-retail$JewelryStores
+```
+
+# Preliminary analysis of the series
+
+```{r}
+agg<-a+b
+plot(ts.union(a, b, agg))
+```
+We can notice the same pattern. E.g. the spikes in December. In addition we observe a spike in December 1996 in series a. However we do not notice the spike in the aggregate. 
+
+# Indirect Seasonal Adjusment
+```{r}
+a_x13<-x13_def(a,"RSA5")
+a_sa<-a_x13$final$series[,"sa"]
+b_x13<-x13_def(b,"RSA5")
+b_sa<-b_x13$final$series[,"sa"] 
+```
+We use X13 to seasonally adjust the two series. 
+```{r}
+agg_sa_ind<-a_sa+b_sa
+plot(ts.union(a_sa, b_sa, agg_sa_ind))
+```
+We built the seasonally adjusted aggreagate. 
+In the seasonal adjusted figure we can clearly see the outlier in December 1996. In the aggregate it is not noticeable in the same extent.
+```{r}
+plot(agg_sa_ind)
+
+```
+
+We want to test for seasonality. We see that the series neither displays seasonality for the QS Method nor the Friedman method. 
+```{r}
+jd_seasonality(agg_sa_ind, test="QS")
+jd_seasonality(agg_sa_ind, test="FRIEDMAN")
+```
+
+# Direct Seasonal Adjustment
+```{r}
+agg_sa_dir_x13<-x13_def(agg,"RSA5")
+agg_sa_dir<-agg_sa_dir_x13$final$series[,"sa"]
+ts.plot( agg_sa_dir)
+```
+Again we check whether seasonaltiy remains in the seasonal adjusted series. 
+We see there is no seasonality left. 
+```{r}
+jd_seasonality(agg_sa_dir, test="QS")
+jd_seasonality(agg_sa_dir, test="FRIEDMAN")
+
+```
+# Comparing the results of the two methods
+```{r}
+ts.plot(ts.union(agg_sa_dir, agg_sa_ind), col=c("black", "red"))
+```
+The indirect method captures the downhill peak while the direct method eliminated it. We assume this is due to the outlier detection. 
+
+
+
+
+#### Outliers of series a
+```{r}
+a_x13$regarima$regression.coefficients
+
+```
+
+#### Outliers of series b
+```{r}
+b_x13$regarima$regression.coefficients
+
+```
+#### Outliers of the aggregated series
+```{r}
+agg_sa_dir_x13$regarima$regression.coefficients
+```
+We notice that the two outliers May and December 1996 are found in series a but not in the aggregate of series a and b. However we find a new outlier in September 2008. 
+
+We can conclude that in this particular case direct seasonal adjustment make the outlier in May 1996 disappear.
+
+```{r}
+data.frame(month=1:12, 
+           direct=window(agg_sa_dir, c(1996,1), c(1996,12)), 
+           indirect=window(agg_sa_ind, c(1996,1), c(1996,12)))
+```
+## Anaylsis of the differences
+```{r}
+dif<-agg_sa_dir-agg_sa_ind
+plot(dif)
+
+```
+We can see seasonality in the difference of the two different seasonal adjusted aggregates.
+```{r}
+jd_seasonality(dif)
+```
+This is confirmed by the test.
+So, why is that?
